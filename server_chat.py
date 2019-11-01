@@ -24,24 +24,6 @@ questions = {
     "Pi ? ": "3.14",
     "Le meilleur manga de tous les temps ? " :"one piece"
 }
-
-
-def quez(client) : 
-    compteur  = 0 
-    for q,r in questions.items() : 
-        response = []
-        client.send(q.encode("utf8"))
-        response,_,_ = select.select([client],[],[],30) 
-        
-        if response  != [] : 
-            rep = client.recv(1024).decode('utf8')
-
-            if r == rep : 
-                compteur= compteur + 1
-                client.send("Bonne réponse ! \n ".encode("utf8"))
-            else  : 
-                client.send("Mauvaise réponse ! \n ".encode("utf8"))
-
     
 # liste des joueurs 
 joueurs = []
@@ -56,7 +38,7 @@ while True:
     
         clients_a_lire = []
         try:
-            # waiting any events about connexion_principal all any socket traying to connect to server 
+            # waiting any events about connexion_principal all any socket traying to connect to our server 
             clients_a_lire, _, _ =select.select(sockets,[], [] )
             
             for client in clients_a_lire:
@@ -74,38 +56,37 @@ while True:
                                 for x in joueurs : 
                                     x.soc.send("Envoyez 'start' pour lancer le jeu ...".encode("utf8") )
                              elif len(joueurs) == 1 : 
-                                  print("been here ?")
                                   joueurs[0].soc.send("Veuillez patienter que au moins 2 joueurs se connectent ...".encode("utf8")) 
 
                              sockets.append(connexion_avec_client)
+                             #to exit the server safly 
                         elif client == sys.stdin : 
                              s  = input()
-                             print("i'm here")
                              if s == 'fin' : 
                                     get_out = True 
                         else  :
-                            #child
                             if client.recv(1024).decode ('utf8') == 'start' :
                                b = False 
                                for x in joueurs : 
                                    if x.soc == client : 
                                       x.etat = 'start'
-                                   if x.etat = 'waiting':
+                                   # if there is even one gamer didnt send 'start' yet     
+                                   if x.etat == 'waiting':
                                         b = True   
-                                if b :
-                                    client.send("Ok,Veuillez patienter que d'autres joueurs envoient start, tennez vous pret ...".encode('utf8'))
-                                else : 
-                                    # if all gamers sent 'start' 
+                               if b :
+                                    client.send("Ok,Veuillez patienter que d'autres joueurs envoient 'start', tennez vous pret ...".encode('utf8'))
+                                # if all gamers sent 'start' 
+                               else : 
+                                    #child
                                     if (os.fork() ==  0 ) :     
                                         for q,r in questions.items() :
-                                            #we have to check connected gamers before asking every single question to avoid a crash of server   
+                                            #sockets of all gamers 
                                             s=[]                                          
                                             for j in joueurs :
-                                                if j.etat ='gaming' : 
                                                     j.soc.send(q.encode('utf8')) 
                                                     s.append(j.soc)
                                             #time.time() return the current time with seconds         
-                                            now =   t.time()
+                                            now = t.time()
                                             time_over = False  
                                             while not time_over :
                                                 #before select 
@@ -122,14 +103,17 @@ while True:
                                                         time_over = True 
                                                     else : 
                                                         p.send(str("Mauvaise réponse "+ j.nom + " "+j.prenom+" il vous reste "+str(temps_restant)+" pour repondre à la question !" ).encode('utf8'))
-                                                        
+                                                #get out from the  while loop and pass to another question     
                                                 if temps_restant <= 0 : 
                                                     time_over = True  
 
 
+                                    # principal process
+                                    else :         
+                                        # clear list of gamers 
+                                        joueurs.clear()
+                                        
 
-                                            
-                                            
 
                     
         except select.error:
