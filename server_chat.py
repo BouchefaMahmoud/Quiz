@@ -3,7 +3,7 @@ import select
 import sys
 import os 
 import Joueur as j
-
+import time as t 
 
 hote = 'localhost'
 port = 12003
@@ -45,6 +45,12 @@ def quez(client) :
     
 # liste des joueurs 
 joueurs = []
+time_out = 30 
+
+def get_gamer(soc): 
+    for x in joueurs :
+        if x.soc == soc : 
+            return x 
 
 while True:
     
@@ -79,18 +85,50 @@ while True:
                                     get_out = True 
                         else  :
                             #child
-                            if (os.fork() ==  0 ) :     
-                                if client.recv(1024).decode ('utf8') == 'start' :
-                                   b = False 
-                                   for x in joueurs : 
-                                       if x.soc == client : 
-                                          x.etat = 'start'
-                                       if x.etat = 'waiting':
-                                            b = True   
-                                    if b :
-                                        client.send("Ok,Veuillez patienter que d'autres joueurs envoient start, tennez vous pret ...".encode('utf8'))
-                                    else : 
-                                        # if all gamers sent 'start' 
+                            if client.recv(1024).decode ('utf8') == 'start' :
+                               b = False 
+                               for x in joueurs : 
+                                   if x.soc == client : 
+                                      x.etat = 'start'
+                                   if x.etat = 'waiting':
+                                        b = True   
+                                if b :
+                                    client.send("Ok,Veuillez patienter que d'autres joueurs envoient start, tennez vous pret ...".encode('utf8'))
+                                else : 
+                                    # if all gamers sent 'start' 
+                                    if (os.fork() ==  0 ) :     
+                                        for q,r in questions.items() :
+                                            #we have to check connected gamers before asking every single question to avoid a crash of server   
+                                            s=[]                                          
+                                            for j in joueurs :
+                                                if j.etat ='gaming' : 
+                                                    j.soc.send(q.encode('utf8')) 
+                                                    s.append(j.soc)
+                                            #time.time() return the current time with seconds         
+                                            now =   t.time()
+                                            time_over = False  
+                                            while not time_over :
+                                                #before select 
+                                                rep,_,_ = select.select(s,[],[], time_out - (t.time() - now )   )
+                                                #after select
+                                                temps_restant  =  time_out - (t.time() - now )                                                 
+                                                for p in  rep : 
+                                                  
+                                                    j = get_gamer(p) 
+                                                    #good answer 
+                                                    if str(p.recv(1024).decode('utf8')) == r :
+                                                        p.send(str("Bonne réponse "+ j.nom +" " +j.prenom ).encode('utf8'))
+                                                        j.socre = j.score  + 1
+                                                        time_over = True 
+                                                    else : 
+                                                        p.send(str("Mauvaise réponse "+ j.nom + " "+j.prenom+" il vous reste "+str(temps_restant)+" pour repondre à la question !" ).encode('utf8'))
+                                                        
+                                                if temps_restant <= 0 : 
+                                                    time_over = True  
+
+
+
+                                            
                                             
 
                     
