@@ -26,7 +26,6 @@ while True :
         else :
             msg= input(">")
             soc.send(msg.encode('utf8'))
-            print('message envoyé '+msg)
 
 
 

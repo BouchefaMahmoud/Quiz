@@ -18,6 +18,7 @@ class Joueur :
 
     
     def __str__(self):
-        return self.nom+' '+self.prenom+' Score='+str(self.score) + ' ,Ip = '+str(self.ip) + ',port= '+ str(self.port)     
+        return self.nom+' '+self.prenom+' Score='+str(self.score)    
 
-
+    def add_score(self) : 
+        self.score = self.score + 1 
